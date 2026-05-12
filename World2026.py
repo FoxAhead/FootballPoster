@@ -98,6 +98,7 @@ class Data:
         self.matches = pd.read_excel('World2026\\WCup_2026_4.2.5_en.xlsx', sheet_name='Matches', skiprows=3, header=None, usecols='B:E,G:J')
         self.matches.columns = ['MatchNo', 'Team1', 'Team2', 'DateTimeLocalHost', 'VenueNo', 'Venue', 'Team1Name', 'Team2Name']
         dt_host = pd.to_datetime(self.matches['DateTimeLocalHost'])
+        self.tz_name = tz_local.localize(dt_host.iloc[0].to_pydatetime().replace(tzinfo=None)).tzname()
         self.matches['DateTimeLocalHost'] = dt_host.dt.tz_localize(tz_host)
         self.matches['DateTime'] = self.matches['DateTimeLocalHost'].dt.tz_convert(tz_local)
         condition = self.matches['Team1'].isna()
@@ -225,8 +226,9 @@ class Painter:
             line = ((x, y1), (x, y))
             color = C3 if wd < 5 else C5
             self.draw.line(line, fill=color, width=L1)
-        #
-        self.draw.text((0, imageH), 'All times are in %s; "+" indicates the following day.' % tz_local.zone, fill=C4, font=self.font3, anchor="lb")
+        # Remarks
+        text = 'All times are in %s (%s); "+" indicates the following day.' % (tz_local.zone, data.tz_name)
+        self.draw.text((0, imageH), text, fill=C4, font=self.font3, anchor="lb")
 
     def draw_days(self):
         for index, row in data.days.iterrows():
@@ -466,7 +468,7 @@ class Painter:
 
     def save(self):
         filename = os.path.splitext(os.path.basename(__file__))[0]
-        filename += "-poster-%s-%ddpi.png" % (LANG, dpi)
+        filename += "-poster-%s-%s-%ddpi.png" % (LANG, data.tz_name, dpi)
         print(filename)
         # if resample > 1:
         #   self.img = self.img.resize((imageW // resample, imageH // resample), resample=Image.LANCZOS)
@@ -495,7 +497,13 @@ def enumerate_ycs(yc, count, h):
     return enumerate(ycs)
 
 
-def main():
+def draw_poster(d):
+    global dpi, imageW, imageH
+    dpi = d
+    # px
+    imageW = mm2px(width)
+    imageH = mm2px(height)
+
     painter = Painter()
 
     print('draw_grid')
@@ -524,4 +532,5 @@ if __name__ == '__main__':
     data = Data()
     lang = Lang()
     flags = Flags()
-    main()
+    for d in [600]:
+        draw_poster(d)
